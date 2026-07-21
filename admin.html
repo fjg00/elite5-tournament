@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elite 5 Organizer View</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root{--red:#e10600;--blue:#0a2472;--line:#e2e6ef;--muted:#5b6472;}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#f4f6fb;color:#0c1220;padding:30px 20px}
+    .wrap{max-width:1100px;margin:0 auto}
+    .top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-bottom:22px}
+    h1{font-family:'Anton',sans-serif;color:var(--blue);letter-spacing:1px}
+    .count{background:var(--red);color:#fff;padding:6px 14px;border-radius:999px;font-weight:800}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+    .btn{border:none;cursor:pointer;font-weight:800;padding:11px 20px;border-radius:10px;font-size:.95rem}
+    .btn-red{background:var(--red);color:#fff}
+    .btn-blue{background:var(--blue);color:#fff}
+    .btn-ghost{background:#fff;border:1.5px solid var(--line)}
+    .empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:60px 20px;text-align:center;color:var(--muted)}
+    .team{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
+    .team-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:16px}
+    .team-name{font-family:'Anton',sans-serif;font-size:1.5rem;color:var(--blue)}
+    .team-meta{color:var(--muted);font-size:.9rem}
+    .contact{background:#fff6f5;border:1px solid #ffdad7;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.95rem}
+    .contact strong{color:var(--red)}
+    .players{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+    .pcard{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fbfcff}
+    .pcard img{width:100%;height:150px;object-fit:cover;display:block;background:#eef}
+    .pcard .noimg{width:100%;height:150px;display:grid;place-items:center;color:var(--muted);background:#eef}
+    .pinfo{padding:10px 12px}
+    .pinfo .pn{font-weight:800}
+    .pinfo .pd{color:var(--muted);font-size:.85rem}
+    .pinfo a{color:var(--blue);font-size:.85rem;font-weight:700}
+    .cap{display:inline-block;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:6px}
+    .note{color:var(--muted);font-size:.85rem;margin-top:8px}
+    a.back{color:var(--blue);font-weight:700;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Elite 5 Registrations</h1>
+        <a class="back" href="index.html">← Back to site</a>
+      </div>
+      <span class="count" id="count">0 teams</span>
+    </div>
+
+    <div class="bar">
+      <button class="btn btn-blue" id="export">⬇ Export all (JSON)</button>
+      <button class="btn btn-ghost" id="refresh">↻ Refresh</button>
+      <button class="btn btn-red" id="clear">🗑 Clear all</button>
+    </div>
+
+    <p class="note">Note: registrations submitted through this website are stored in <strong>this browser only</strong> (localStorage). To collect entries from teams across Lebanon on their own devices, connect the form to a backend. See <strong>README.md</strong> for setup.</p>
+
+    <div id="list"></div>
+  </div>
+
+  <script>
+    const KEY = 'elite5_registrations';
+    const list = document.getElementById('list');
+    const count = document.getElementById('count');
+
+    function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
+
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function igUrl(h){ const u=String(h||'').replace(/^@/,'').trim(); return u?'https://instagram.com/'+encodeURIComponent(u):''; }
+
+    function render(){
+      const data = load();
+      count.textContent = data.length + (data.length===1?' team':' teams');
+      if(!data.length){ list.innerHTML='<div class="empty">No registrations yet. Entries submitted on this device will appear here.</div>'; return; }
+      list.innerHTML = data.map(r=>`
+        <div class="team">
+          <div class="team-head">
+            <div>
+              <div class="team-name">${esc(r.team && r.team.name)}</div>
+              <div class="team-meta">${esc(r.team && r.team.city)} · ${esc(r.id)} · ${new Date(r.submittedAt).toLocaleString()}</div>
+            </div>
+          </div>
+          <div class="contact">
+            <strong>Captain contact:</strong> ${esc(r.captainContact.name)} ·
+            📞 ${esc(r.captainContact.phone)} ·
+            ✉ <a href="mailto:${esc(r.captainContact.email)}">${esc(r.captainContact.email)}</a>
+          </div>
+          <div class="players">
+            ${r.players.map(p=>`
+              <div class="pcard">
+                ${p.photo?`<img src="${p.photo}" alt="${esc(p.name)}">`:'<div class="noimg">No photo</div>'}
+                <div class="pinfo">
+                  <div class="pn">${esc(p.name)}</div>
+                  <div class="pd">DOB: ${esc(p.dob)}</div>
+                  ${igUrl(p.instagram)?`<a href="${igUrl(p.instagram)}" target="_blank" rel="noopener">${esc(p.instagram)}</a>`:`<span class="pd">${esc(p.instagram)}</span>`}
+                  ${p.isCaptain?'<div><span class="cap">⭐ CAPTAIN</span></div>':''}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+
+    document.getElementById('refresh').addEventListener('click', render);
+    document.getElementById('export').addEventListener('click', ()=>{
+      const blob = new Blob([JSON.stringify(load(),null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='elite5_registrations.json'; a.click(); URL.revokeObjectURL(a.href);
+    });
+    document.getElementById('clear').addEventListener('click', ()=>{
+      if(confirm('Delete ALL registrations stored in this browser? This cannot be undone.')){
+        localStorage.removeItem(KEY); render();
+      }
+    });
+    render();
+  </script>
+</body>
+</html>
