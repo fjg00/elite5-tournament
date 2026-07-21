@@ -4,7 +4,7 @@
 
   // --- Config the organizer can tweak ---
   var MIN_PLAYERS = 5;
-  var MAX_PLAYERS = 10;
+  var MAX_PLAYERS = 8;
   var TOTAL_SPOTS = 8;
   var TEAMS_ALREADY_REGISTERED = 3; // set to the real count of confirmed teams
   var STORAGE_KEY = 'elite5_registrations';
@@ -43,6 +43,41 @@
     }
   }
   updateTracker();
+
+  /* ---------- Jersey color (first come, first served) ---------- */
+  var JERSEY_COLORS = [
+    { n: 'Red', h: '#e11d2a' }, { n: 'Blue', h: '#1e5cff' }, { n: 'Green', h: '#16a34a' },
+    { n: 'Yellow', h: '#f5c518' }, { n: 'Orange', h: '#f97316' }, { n: 'Purple', h: '#7c3aed' },
+    { n: 'Black', h: '#111111' }, { n: 'White', h: '#ffffff' }
+  ];
+  var picker = $('#color-picker');
+  var jerseyInput = $('#jerseyColor');
+  function takenColors() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').map(function (r) { return r.team && r.team.jerseyColor; }).filter(Boolean); }
+    catch (e) { return []; }
+  }
+  function buildColors() {
+    if (!picker) return;
+    var taken = takenColors();
+    picker.innerHTML = '';
+    JERSEY_COLORS.forEach(function (c) {
+      var isTaken = taken.indexOf(c.n) !== -1;
+      var opt = document.createElement('button');
+      opt.type = 'button';
+      opt.className = 'color-opt' + (isTaken ? ' taken' : '') + (jerseyInput.value === c.n && !isTaken ? ' selected' : '');
+      opt.setAttribute('aria-label', c.n + (isTaken ? ' (taken)' : ''));
+      opt.innerHTML = '<span class="swatch" style="background:' + c.h + '"></span><span class="cname">' + c.n + '</span>';
+      if (isTaken) { opt.disabled = true; if (jerseyInput.value === c.n) jerseyInput.value = ''; }
+      else opt.addEventListener('click', function () {
+        $$('.color-opt', picker).forEach(function (o) { o.classList.remove('selected'); });
+        opt.classList.add('selected');
+        jerseyInput.value = c.n;
+        picker.classList.remove('invalid');
+      });
+      picker.appendChild(opt);
+    });
+  }
+  buildColors();
 
   /* ---------- Player rows ---------- */
   var list = $('#players-list');
@@ -104,8 +139,9 @@
     setStatus('');
     if (n === 1) {
       var ok = true;
-      ['teamName'].forEach(function (id) { var el = $('#' + id); var bad = !el.value.trim(); markInvalid(el, bad); if (bad) ok = false; });
-      if (!ok) setStatus('Enter your team name.', 'error');
+      var tn = $('#teamName'); var tnBad = !tn.value.trim(); markInvalid(tn, tnBad); if (tnBad) ok = false;
+      if (!jerseyInput.value) { ok = false; if (picker) picker.classList.add('invalid'); } else if (picker) picker.classList.remove('invalid');
+      if (!ok) setStatus(tnBad ? 'Enter your team name.' : 'Pick a jersey color.', 'error');
       return ok;
     }
     if (n === 2) {
@@ -137,11 +173,10 @@
     var players = collect(), ok = true, firstErr = '';
     if (players.length < MIN_PLAYERS) { ok = false; firstErr = 'Add at least ' + MIN_PLAYERS + ' players.'; }
     players.forEach(function (p) {
-      var nameBad = !p.name, dobBad = !dobInRange(p.dob), igBad = !p.instagram, photoBad = !p.photo;
+      var nameBad = !p.name, dobBad = !dobInRange(p.dob), photoBad = !p.photo;
       markInvalid($('.p-name', p._card), nameBad);
       markInvalid($('.p-dob', p._card), dobBad);
-      markInvalid($('.p-instagram', p._card), igBad);
-      if (nameBad || dobBad || igBad || photoBad) { ok = false; if (!firstErr) firstErr = photoBad ? 'Add a photo for ' + (p.name || 'each player') + '.' : (dobBad ? (p.name || 'A player') + ' must be born 2009–2011.' : 'Complete every player\'s details.'); }
+      if (nameBad || dobBad || photoBad) { ok = false; if (!firstErr) firstErr = photoBad ? 'Add a photo for ' + (p.name || 'each player') + '.' : (dobBad ? (p.name || 'A player') + ' must be born 2009–2011.' : 'Complete every player\'s details.'); }
     });
     if (!players.some(function (p) { return p.isCaptain; })) { ok = false; if (!firstErr) firstErr = 'Tap ⭐ to choose your captain.'; }
     if (!$('#agree').checked) { ok = false; if (!firstErr) firstErr = 'Please confirm the eligibility statement.'; }
@@ -160,7 +195,7 @@
     var reg = {
       id: 'E5-' + Date.now(),
       submittedAt: new Date().toISOString(),
-      team: { name: $('#teamName').value.trim() },
+      team: { name: $('#teamName').value.trim(), jerseyColor: jerseyInput.value },
       captainContact: { name: $('#captainName').value.trim(), phone: $('#captainPhone').value.trim(), email: $('#captainEmail').value.trim() },
       players: res.players.map(function (p) { return { name: p.name, dob: p.dob, instagram: p.instagram, isCaptain: p.isCaptain, photo: p.photo }; })
     };
@@ -170,6 +205,7 @@
     } catch (err) { console.warn('Local save failed:', err); }
 
     updateTracker();
+    buildColors();
     renderSuccess(reg);
     showStep(4);
   });
@@ -183,7 +219,8 @@
       '<div class="reg-success">' +
       '<div class="tick"><svg class="ico"><use href="#i-check"/></svg></div>' +
       '<h3>You\'re in, ' + esc(reg.team.name) + '!</h3>' +
-      '<p>Registration received. We\'ll contact <strong style="color:#f3f6ff">' + esc(reg.captainContact.name) + '</strong> at ' + esc(reg.captainContact.phone) + ' to confirm your spot.</p>' +
+      '<p>Registration received. We\'ll contact <strong style="color:#0b1024">' + esc(reg.captainContact.name) + '</strong> at ' + esc(reg.captainContact.phone) + ' to confirm your spot.</p>' +
+      '<p>Jersey color locked in: <span class="rid">' + esc(reg.team.jerseyColor) + '</span></p>' +
       '<p>Registration ID: <span class="rid">' + reg.id + '</span></p>' +
       '<p>' + (spotsLeft > 0 ? spotsLeft + ' spot' + (spotsLeft === 1 ? '' : 's') + ' left.' : 'That may have been the last spot!') + '</p>' +
       '<button type="button" class="btn btn-line btn-sm" id="dl-json" style="margin-top:16px">Download entry (backup)</button>' +

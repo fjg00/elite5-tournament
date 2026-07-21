@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
 
@@ -98,7 +98,6 @@
     <div class="container container-narrow">
       <p class="eyebrow">// Team Registration</p>
       <h2 class="section-title">Claim your spot</h2>
-      <p class="register-intro">Free to enter. Takes about 3 minutes. You'll add your team, captain contact, and squad (with photos &amp; Instagram).</p>
 
       <form id="registration-form" class="reg-form" novalidate>
         <!-- Progress -->
@@ -116,6 +115,12 @@
           <div class="field">
             <label for="teamName">Team Name <span class="req">*</span></label>
             <input type="text" id="teamName" name="teamName" required placeholder="e.g. Aramoun Lions" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>Preferred Jersey Color <span class="req">*</span></label>
+            <p class="field-hint">First come, first served — one color per team. Greyed-out colors are already taken.</p>
+            <div class="color-picker" id="color-picker" role="radiogroup" aria-label="Preferred jersey color"></div>
+            <input type="hidden" id="jerseyColor" />
           </div>
           <div class="step-nav">
             <span></span>
@@ -148,7 +153,7 @@
         <!-- STEP 3: Squad -->
         <div class="form-step" data-step="3">
           <h3 class="step-title">Your squad</h3>
-          <p class="step-hint">Add <strong>5–10 players</strong>. Each needs a photo, Instagram, and DOB (ages 15–17, born 2009–2011). Tap the star to set your captain.</p>
+          <p class="step-hint">Add <strong>5–8 players</strong> (5 starters + up to 3 subs). Each needs a photo and DOB (ages 15–17). Instagram is optional. Tap the star to set your captain.</p>
           <div id="players-list"></div>
           <button type="button" id="add-player" class="btn btn-add">+ Add player</button>
           <label class="agree-check">
@@ -192,7 +197,7 @@
       <p class="eyebrow">// Proudly Supported By</p>
       <h2 class="section-title">Partners &amp; Sponsors</h2>
       <div class="host-partner">
-        <img src="Sponsors/GoldenBall_clean.jpeg" alt="Golden Ball Football Academy" />
+        <img src="Sponsors/goldenball.jpg" alt="Golden Ball Football Academy" />
         <div>
           <span class="host-label">Host Venue</span>
           <h3>Golden Ball Football Academy</h3>
@@ -200,11 +205,11 @@
         </div>
       </div>
       <div class="sponsors-grid">
-        <div class="sponsor-card"><img src="Sponsors/JBULL_clean.jpeg" alt="JBull Protein Bar" /></div>
+        <div class="sponsor-card"><img src="Sponsors/JBULL_square.jpeg" alt="JBull Protein Bar" /></div>
         <div class="sponsor-card"><img src="Sponsors/Madeglobal.jpeg" alt="Made Global" /></div>
         <div class="sponsor-card"><img src="Sponsors/MarkoExpress.jpeg" alt="Marko Express" /></div>
-        <div class="sponsor-card"><img src="Sponsors/beysneaks.jpeg" alt="Bey Sneaks" /></div>
-        <div class="sponsor-card"><img src="Sponsors/Farfour_clean.jpeg" alt="M. Farfour Pharmacy" /></div>
+        <div class="sponsor-card"><img src="Sponsors/beysneaks_square.jpeg" alt="Bey Sneaks" /></div>
+        <div class="sponsor-card"><img src="Sponsors/Farfour_square.jpeg" alt="M. Farfour Pharmacy" /></div>
       </div>
     </div>
   </section>
@@ -260,7 +265,7 @@
               <input type="date" class="p-dob" min="2009-01-01" max="2011-12-31" />
             </div>
             <div class="field">
-              <label>Instagram <span class="req">*</span></label>
+              <label>Instagram <span class="opt">optional</span></label>
               <input type="text" class="p-instagram" placeholder="@username" autocomplete="off" />
             </div>
           </div>
@@ -274,6 +279,6 @@
     </div>
   </template>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=3"></script>
 </body>
 </html>

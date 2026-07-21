@@ -23,6 +23,8 @@
     .team-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;border-bottom:2px solid var(--line);padding-bottom:14px;margin-bottom:16px}
     .team-name{font-family:'Anton',sans-serif;font-size:1.5rem;color:var(--blue)}
     .team-meta{color:var(--muted);font-size:.9rem}
+    .team-jersey{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.9rem;margin:4px 0}
+    .jersey-dot{width:16px;height:16px;border:2px solid var(--blue);display:inline-block;flex-shrink:0}
     .contact{background:#fff6f5;border:1px solid #ffdad7;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:.95rem}
     .contact strong{color:var(--red)}
     .players{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
@@ -68,6 +70,7 @@
 
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function igUrl(h){ const u=String(h||'').replace(/^@/,'').trim(); return u?'https://instagram.com/'+encodeURIComponent(u):''; }
+    const JCOL={Red:'#e11d2a',Blue:'#1e5cff',Green:'#16a34a',Yellow:'#f5c518',Orange:'#f97316',Purple:'#7c3aed',Black:'#111111',White:'#ffffff'};
 
     function render(){
       const data = load();
@@ -78,7 +81,8 @@
           <div class="team-head">
             <div>
               <div class="team-name">${esc(r.team && r.team.name)}</div>
-              <div class="team-meta">${esc(r.team && r.team.city)} · ${esc(r.id)} · ${new Date(r.submittedAt).toLocaleString()}</div>
+              ${r.team&&r.team.jerseyColor?`<div class="team-jersey"><span class="jersey-dot" style="background:${JCOL[r.team.jerseyColor]||'#ccc'}"></span>${esc(r.team.jerseyColor)} jersey</div>`:''}
+              <div class="team-meta">${esc(r.id)} · ${new Date(r.submittedAt).toLocaleString()}</div>
             </div>
           </div>
           <div class="contact">
@@ -93,7 +97,7 @@
                 <div class="pinfo">
                   <div class="pn">${esc(p.name)}</div>
                   <div class="pd">DOB: ${esc(p.dob)}</div>
-                  ${igUrl(p.instagram)?`<a href="${igUrl(p.instagram)}" target="_blank" rel="noopener">${esc(p.instagram)}</a>`:`<span class="pd">${esc(p.instagram)}</span>`}
+                  ${igUrl(p.instagram)?`<a href="${igUrl(p.instagram)}" target="_blank" rel="noopener">${esc(p.instagram)}</a>`:'<span class="pd" style="opacity:.5">No Instagram</span>'}
                   ${p.isCaptain?'<div><span class="cap">⭐ CAPTAIN</span></div>':''}
                 </div>
               </div>`).join('')}
