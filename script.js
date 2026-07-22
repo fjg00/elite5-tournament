@@ -190,7 +190,7 @@
       var row = document.createElement('div');
       row.className = 'roster-row' + (p.isCaptain ? ' is-captain' : '');
       row.innerHTML =
-        '<img class="roster-photo" src="' + p.photo + '" alt="">' +
+        (p.photo ? '<img class="roster-photo" src="' + p.photo + '" alt="">' : '<span class="roster-photo roster-nophoto">?</span>') +
         '<div class="roster-info"><div class="roster-name">' + esc(p.name) + (p.isCaptain ? ' <span class="cap-tag">Captain</span>' : '') + '</div>' +
         '<div class="roster-sub">' + esc(p.dob) + (p.instagram ? ' · ' + esc(p.instagram) : '') + '</div></div>' +
         '<button type="button" class="roster-cap" title="Set as captain" aria-label="Set as captain"><svg class="ico ico-sm ico-fill"><use href="#i-star"/></svg></button>' +
@@ -217,11 +217,11 @@
   if (addToRosterBtn) addToRosterBtn.addEventListener('click', function () {
     if (roster.length >= MAX_PLAYERS) return;
     var name = npName.value.trim(), dob = npDob.value;
-    var nameBad = !name, dobBad = !dobInRange(dob), photoBad = !pendingPhoto;
+    var nameBad = !name, dobBad = !dobInRange(dob);
     npName.classList.toggle('invalid', nameBad);
     npDob.classList.toggle('invalid', dobBad);
-    if (nameBad || dobBad || photoBad) {
-      setAddStatus(photoBad ? 'Add a photo for this player.' : (dobBad ? 'Date of birth must be 2009–2011.' : 'Enter the player\'s name.'), 'error');
+    if (nameBad || dobBad) {
+      setAddStatus(nameBad ? 'Enter the player\'s name.' : 'Date of birth must be 2009–2011.', 'error');
       return;
     }
     roster.push({ name: name, dob: dob, instagram: npIg.value.trim(), photo: pendingPhoto, isCaptain: roster.length === 0 });

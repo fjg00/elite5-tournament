@@ -227,6 +227,7 @@ a { color: inherit; text-decoration: none; }
 .roster-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-2); border: 2px solid var(--line-soft); }
 .roster-row.is-captain { border-color: var(--pink); }
 .roster-photo { width: 46px; height: 46px; object-fit: cover; border: 2px solid var(--ink); flex-shrink: 0; }
+.roster-nophoto { display: grid; place-items: center; background: var(--bg-2); color: var(--muted-2); font-weight: 700; }
 .roster-info { flex: 1; min-width: 0; }
 .roster-name { font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; font-size: .95rem; display: flex; align-items: center; gap: 8px; }
 .cap-tag { font-size: .62rem; background: var(--pink); color: #fff; padding: 2px 6px; letter-spacing: 1px; }

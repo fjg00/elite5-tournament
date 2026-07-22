@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
 
@@ -153,7 +153,7 @@
         <!-- STEP 3: Squad -->
         <div class="form-step" data-step="3">
           <h3 class="step-title">Your squad</h3>
-          <p class="step-hint">Add players one at a time — <strong>5 to 8</strong> (5 starters + up to 3 subs). Photo and date of birth are required; Instagram is optional. Tap a star to set your captain.</p>
+          <p class="step-hint">Add players one at a time — <strong>5 to 8</strong> (5 starters + up to 3 subs). Date of birth is required; photo and Instagram are optional. Tap a star to set your captain.</p>
 
           <!-- Added players -->
           <div id="roster" class="roster"></div>
@@ -165,7 +165,7 @@
             <div class="player-body">
               <label class="photo-drop">
                 <input type="file" accept="image/*" class="np-photo" />
-                <span class="photo-placeholder"><svg class="ico ico-md"><use href="#i-camera"/></svg><br />Photo</span>
+                <span class="photo-placeholder"><svg class="ico ico-md"><use href="#i-camera"/></svg><br />Photo <span class="opt">optional</span></span>
                 <img class="np-preview photo-preview" alt="" hidden />
               </label>
               <div class="player-fields">
@@ -275,6 +275,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js?v=1"></script>
-  <script src="script.js?v=7"></script>
+  <script src="script.js?v=8"></script>
 </body>
 </html>
