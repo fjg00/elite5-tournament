@@ -13,7 +13,10 @@
   var sb = null;
   try {
     if (window.ELITE5_SUPABASE_URL && window.ELITE5_SUPABASE_ANON_KEY && window.supabase) {
-      sb = window.supabase.createClient(window.ELITE5_SUPABASE_URL, window.ELITE5_SUPABASE_ANON_KEY);
+      // persistSession:false — the public page must always act as an anonymous
+      // visitor, even if the organizer is logged in to admin.html in this browser
+      sb = window.supabase.createClient(window.ELITE5_SUPABASE_URL, window.ELITE5_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } });
     }
   } catch (e) { sb = null; }
 

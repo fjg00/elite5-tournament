@@ -18,7 +18,7 @@ alter table public.registrations enable row level security;
 
 drop policy if exists "anon can register" on public.registrations;
 create policy "anon can register" on public.registrations
-  for insert to anon with check (true);
+  for insert to anon, authenticated with check (true);
 
 drop policy if exists "admin read" on public.registrations;
 create policy "admin read" on public.registrations
@@ -107,7 +107,7 @@ insert into storage.buckets (id, name, public)
 
 drop policy if exists "anon upload photos" on storage.objects;
 create policy "anon upload photos" on storage.objects
-  for insert to anon with check (bucket_id = 'player-photos');
+  for insert to anon, authenticated with check (bucket_id = 'player-photos');
 
 drop policy if exists "admin read photos" on storage.objects;
 create policy "admin read photos" on storage.objects
