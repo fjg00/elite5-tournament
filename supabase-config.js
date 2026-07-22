@@ -6,5 +6,5 @@
 //
 // Leave them empty and the site keeps working in "this browser only" demo mode.
 
-window.ELITE5_SUPABASE_URL = ''; // TODO: paste your Project URL, e.g. https://xxxx.supabase.co
+window.ELITE5_SUPABASE_URL = 'https://vzcmdokjhcdrgrllqwzs.supabase.co';
 window.ELITE5_SUPABASE_ANON_KEY = 'sb_publishable_I_vOeNUAN2SJqyXqfHaeQA_cZpQOFGm';
