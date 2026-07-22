@@ -2,12 +2,20 @@
 (function () {
   'use strict';
 
-  // --- Config the organizer can tweak ---
   var MIN_PLAYERS = 5;
   var MAX_PLAYERS = 8;
   var TOTAL_SPOTS = 8;
-  var TEAMS_ALREADY_REGISTERED = 0; // extra teams already confirmed offline; the tracker adds live registrations on top
   var STORAGE_KEY = 'elite5_registrations';
+  var SETTINGS_KEY = 'elite5_settings';
+
+  // Supabase (cloud mode). Falls back to this-browser-only storage when
+  // supabase-config.js is not filled in yet.
+  var sb = null;
+  try {
+    if (window.ELITE5_SUPABASE_URL && window.ELITE5_SUPABASE_ANON_KEY && window.supabase) {
+      sb = window.supabase.createClient(window.ELITE5_SUPABASE_URL, window.ELITE5_SUPABASE_ANON_KEY);
+    }
+  } catch (e) { sb = null; }
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
@@ -24,12 +32,16 @@
     $$('a', links).forEach(function (a) { a.addEventListener('click', function () { links.classList.remove('open'); }); });
   }
 
-  /* ---------- Urgency tracker ---------- */
-  function localCount() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').length; } catch (e) { return 0; }
-  }
-  function updateTracker() {
-    var count = Math.min(TEAMS_ALREADY_REGISTERED + localCount(), TOTAL_SPOTS);
+  /* ---------- Shared state (from cloud or local fallback) ---------- */
+  var teamCount = 0;
+  var takenList = [];
+  var registrationOpen = true;
+
+  function localRegs() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { return []; } }
+  function localSettings() { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch (e) { return {}; } }
+
+  function updateTrackerUI() {
+    var count = Math.min(teamCount, TOTAL_SPOTS);
     var left = TOTAL_SPOTS - count;
     var countEl = $('#tracker-count');
     var fillEl = $('#tracker-fill');
@@ -37,12 +49,57 @@
     if (countEl) countEl.textContent = count;
     if (fillEl) fillEl.style.width = (count / TOTAL_SPOTS * 100) + '%';
     if (noteEl) {
-      if (left <= 0) { noteEl.textContent = 'All spots claimed. Registration full.'; noteEl.classList.add('hot'); }
+      if (!registrationOpen) { noteEl.textContent = 'Registration is currently closed.'; noteEl.classList.add('hot'); }
+      else if (left <= 0) { noteEl.textContent = 'All spots claimed. Registration full.'; noteEl.classList.add('hot'); }
       else if (left <= 3) { noteEl.textContent = 'Only ' + left + ' spot' + (left === 1 ? '' : 's') + ' left. Going fast.'; noteEl.classList.add('hot'); }
       else { noteEl.textContent = left + ' of ' + TOTAL_SPOTS + ' spots still open.'; noteEl.classList.remove('hot'); }
     }
   }
-  updateTracker();
+
+  function applyOpenState() {
+    var regForm = $('#registration-form');
+    if (!regForm) return;
+    var full = teamCount >= TOTAL_SPOTS;
+    var blocked = !registrationOpen || full;
+    var panel = $('#reg-closed');
+    if (blocked) {
+      regForm.style.display = 'none';
+      if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'reg-closed';
+        panel.className = 'reg-form reg-closed';
+        regForm.parentElement.appendChild(panel);
+      }
+      panel.innerHTML =
+        '<h3 class="step-title">' + (full ? 'All 8 spots are taken' : 'Registration is closed') + '</h3>' +
+        '<p class="step-hint">' + (full ? 'The bracket is full. Follow the tournament for the next edition.' : 'Check back soon — registration will reopen.') + '</p>';
+    } else {
+      regForm.style.display = '';
+      if (panel) panel.remove();
+    }
+  }
+
+  function refreshRemote() {
+    if (sb) {
+      return Promise.all([
+        sb.rpc('team_count'),
+        sb.rpc('taken_colors'),
+        sb.from('settings').select('registration_open').eq('id', 1).single()
+      ]).then(function (r) {
+        if (typeof r[0].data === 'number') teamCount = r[0].data;
+        if (r[1].data) takenList = r[1].data;
+        if (r[2].data) registrationOpen = !!r[2].data.registration_open;
+        updateTrackerUI(); buildColors(); applyOpenState();
+      }).catch(function () { updateTrackerUI(); buildColors(); applyOpenState(); });
+    }
+    // local fallback
+    var regs = localRegs();
+    teamCount = regs.length;
+    takenList = regs.map(function (r) { return r.team && r.team.jerseyColor; }).filter(Boolean);
+    registrationOpen = localSettings().registration_open !== false;
+    updateTrackerUI(); buildColors(); applyOpenState();
+    return Promise.resolve();
+  }
 
   /* ---------- Jersey color (first come, first served) ---------- */
   var JERSEY_COLORS = [
@@ -52,16 +109,11 @@
   ];
   var picker = $('#color-picker');
   var jerseyInput = $('#jerseyColor');
-  function takenColors() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').map(function (r) { return r.team && r.team.jerseyColor; }).filter(Boolean); }
-    catch (e) { return []; }
-  }
   function buildColors() {
     if (!picker) return;
-    var taken = takenColors();
     picker.innerHTML = '';
     JERSEY_COLORS.forEach(function (c) {
-      var isTaken = taken.indexOf(c.n) !== -1;
+      var isTaken = takenList.indexOf(c.n) !== -1;
       var opt = document.createElement('button');
       opt.type = 'button';
       opt.className = 'color-opt' + (isTaken ? ' taken' : '') + (jerseyInput.value === c.n && !isTaken ? ' selected' : '');
@@ -77,9 +129,34 @@
       picker.appendChild(opt);
     });
   }
-  buildColors();
 
-  /* ---------- Player rows ---------- */
+  /* ---------- Photo helpers (shrink for fast mobile uploads) ---------- */
+  function readAndShrink(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var max = 800, w = img.width, h = img.height;
+        var s = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * s));
+        c.height = Math.max(1, Math.round(h * s));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        cb(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = function () { cb(e.target.result); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+  function dataURLtoBlob(durl) {
+    var arr = durl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+    var bstr = atob(arr[1]), n = bstr.length, u8 = new Uint8Array(n);
+    while (n--) u8[n] = bstr.charCodeAt(n);
+    return new Blob([u8], { type: mime });
+  }
+
+  /* ---------- Squad: add players one at a time ---------- */
   var roster = [];
   var rosterEl = $('#roster');
   var rosterCountEl = $('#roster-count');
@@ -91,14 +168,16 @@
   var npPlaceholder = addCard ? $('.photo-placeholder', addCard) : null;
   var pendingPhoto = null;
 
-  function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function setAddStatus(msg, type) { if (!addStatus) return; addStatus.textContent = msg || ''; addStatus.className = 'form-status' + (type ? ' ' + type : ''); }
 
   if (npPhotoInput) npPhotoInput.addEventListener('change', function () {
     var file = npPhotoInput.files[0]; if (!file) return;
-    var reader = new FileReader();
-    reader.onload = function (e) { pendingPhoto = e.target.result; npPreview.src = pendingPhoto; npPreview.hidden = false; if (npPlaceholder) npPlaceholder.style.display = 'none'; };
-    reader.readAsDataURL(file);
+    readAndShrink(file, function (durl) {
+      pendingPhoto = durl;
+      npPreview.src = durl; npPreview.hidden = false;
+      if (npPlaceholder) npPlaceholder.style.display = 'none';
+    });
   });
 
   function renderRoster() {
@@ -109,8 +188,8 @@
       row.className = 'roster-row' + (p.isCaptain ? ' is-captain' : '');
       row.innerHTML =
         '<img class="roster-photo" src="' + p.photo + '" alt="">' +
-        '<div class="roster-info"><div class="roster-name">' + esc2(p.name) + (p.isCaptain ? ' <span class="cap-tag">Captain</span>' : '') + '</div>' +
-        '<div class="roster-sub">' + esc2(p.dob) + (p.instagram ? ' · ' + esc2(p.instagram) : '') + '</div></div>' +
+        '<div class="roster-info"><div class="roster-name">' + esc(p.name) + (p.isCaptain ? ' <span class="cap-tag">Captain</span>' : '') + '</div>' +
+        '<div class="roster-sub">' + esc(p.dob) + (p.instagram ? ' · ' + esc(p.instagram) : '') + '</div></div>' +
         '<button type="button" class="roster-cap" title="Set as captain" aria-label="Set as captain"><svg class="ico ico-sm ico-fill"><use href="#i-star"/></svg></button>' +
         '<button type="button" class="roster-del" title="Remove player" aria-label="Remove player"><svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
       row.querySelector('.roster-cap').addEventListener('click', function () { setCaptain(idx); });
@@ -210,6 +289,45 @@
   $$('.next-step', form).forEach(function (b) { b.addEventListener('click', function () { if (validateStep(current)) showStep(current + 1); }); });
   $$('.prev-step', form).forEach(function (b) { b.addEventListener('click', function () { showStep(current - 1); }); });
 
+  /* ---------- Submit ---------- */
+  function submitCloud(reg) {
+    var players = [];
+    var chain = Promise.resolve();
+    reg.players.forEach(function (p, i) {
+      chain = chain.then(function () {
+        var entry = { name: p.name, dob: p.dob, instagram: p.instagram, is_captain: p.isCaptain, photo_path: null };
+        players.push(entry);
+        if (!p.photo) return;
+        var path = reg.id + '/' + (i + 1) + '.jpg';
+        return sb.storage.from('player-photos')
+          .upload(path, dataURLtoBlob(p.photo), { contentType: 'image/jpeg' })
+          .then(function (up) {
+            if (up.error) throw up.error;
+            entry.photo_path = path;
+          });
+      });
+    });
+    return chain.then(function () {
+      return sb.from('registrations').insert({
+        id: reg.id,
+        team_name: reg.team.name,
+        jersey_color: reg.team.jerseyColor,
+        captain_name: reg.captainContact.name,
+        captain_phone: reg.captainContact.phone,
+        captain_email: reg.captainContact.email,
+        players: players
+      });
+    }).then(function (ins) { if (ins.error) throw ins.error; });
+  }
+
+  function afterSubmit(reg) {
+    teamCount += 1;
+    if (reg.team.jerseyColor) takenList.push(reg.team.jerseyColor);
+    updateTrackerUI();
+    renderSuccess(reg);
+    showStep(4);
+  }
+
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     var res = validateSquad();
@@ -222,22 +340,45 @@
       captainContact: { name: $('#captainName').value.trim(), phone: $('#captainPhone').value.trim(), email: $('#captainEmail').value.trim() },
       players: res.players.map(function (p) { return { name: p.name, dob: p.dob, instagram: p.instagram, isCaptain: p.isCaptain, photo: p.photo }; })
     };
-    try {
-      var all = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-      all.push(reg); localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-    } catch (err) { console.warn('Local save failed:', err); }
 
-    updateTracker();
-    buildColors();
-    renderSuccess(reg);
-    showStep(4);
+    if (sb) {
+      var btn = form.querySelector('.btn-submit');
+      btn.disabled = true;
+      setStatus('Submitting your team…');
+      submitCloud(reg).then(function () {
+        btn.disabled = false;
+        setStatus('');
+        afterSubmit(reg);
+      }).catch(function (err) {
+        btn.disabled = false;
+        var m = String((err && (err.message || err.error_description)) || err || '');
+        if (/uniq_jersey|duplicate key/i.test(m)) {
+          setStatus('That jersey color was just taken by another team. Please pick a new one.', 'error');
+          jerseyInput.value = '';
+          refreshRemote().then(function () { showStep(1); });
+        } else if (/Registration full/i.test(m)) {
+          setStatus('Sorry — all 8 spots have just been taken.', 'error');
+          refreshRemote();
+        } else if (/Registration closed/i.test(m)) {
+          setStatus('Registration is currently closed.', 'error');
+          refreshRemote();
+        } else {
+          setStatus('Could not submit. Check your internet connection and try again.', 'error');
+        }
+      });
+    } else {
+      try {
+        var all = localRegs();
+        all.push(reg);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      } catch (err) { console.warn('Local save failed:', err); }
+      afterSubmit(reg);
+    }
   });
-
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
   function renderSuccess(reg) {
     var panel = $('#success-panel');
-    var spotsLeft = Math.max(TOTAL_SPOTS - Math.min(TEAMS_ALREADY_REGISTERED + localCount(), TOTAL_SPOTS), 0);
+    var spotsLeft = Math.max(TOTAL_SPOTS - Math.min(teamCount, TOTAL_SPOTS), 0);
     panel.innerHTML =
       '<div class="reg-success">' +
       '<div class="tick"><svg class="ico"><use href="#i-check"/></svg></div>' +
@@ -255,4 +396,7 @@
       a.download = reg.team.name.replace(/\s+/g, '_') + '_Elite5.json'; a.click(); URL.revokeObjectURL(a.href);
     });
   }
+
+  /* ---------- Init ---------- */
+  refreshRemote();
 })();

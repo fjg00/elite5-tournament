@@ -4,9 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Elite 5 Organizer View</title>
+  <meta name="robots" content="noindex" />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    :root{--red:#e10600;--blue:#0a2472;--line:#e2e6ef;--muted:#5b6472;}
+    :root{--red:#e10600;--blue:#0a2472;--green:#16a34a;--line:#e2e6ef;--muted:#5b6472;}
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Inter',sans-serif;background:#f4f6fb;color:#0c1220;padding:30px 20px}
     .wrap{max-width:1100px;margin:0 auto}
@@ -17,6 +18,7 @@
     .btn{border:none;cursor:pointer;font-weight:800;padding:11px 20px;border-radius:10px;font-size:.95rem}
     .btn-red{background:var(--red);color:#fff}
     .btn-blue{background:var(--blue);color:#fff}
+    .btn-green{background:var(--green);color:#fff}
     .btn-ghost{background:#fff;border:1.5px solid var(--line)}
     .empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:60px 20px;text-align:center;color:var(--muted)}
     .team{background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
@@ -36,9 +38,8 @@
     .pinfo .pd{color:var(--muted);font-size:.85rem}
     .pinfo a{color:var(--blue);font-size:.85rem;font-weight:700}
     .cap{display:inline-block;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:6px}
-    .note{color:var(--muted);font-size:.85rem;margin-top:8px}
+    .note{color:var(--muted);font-size:.85rem;margin-top:8px;margin-bottom:18px}
     a.back{color:var(--blue);font-weight:700;text-decoration:none}
-    .btn-green{background:#16a34a;color:#fff}
     .results{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
     .rtitle{font-family:'Anton',sans-serif;color:var(--blue);font-size:1.3rem;margin-bottom:14px;letter-spacing:.5px}
     .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px}
@@ -50,6 +51,10 @@
     .placement{display:inline-block;font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:999px;margin-left:10px;vertical-align:middle}
     .placement.champ{background:#f5c518;color:#3a2e00}
     .placement.run{background:#c7cde0;color:#1a2036}
+    .login{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;max-width:420px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
+    .login input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:1rem;font-family:inherit;margin-bottom:12px}
+    .login .err{color:var(--red);font-weight:700;font-size:.9rem;min-height:1.2em;margin-top:8px}
+    [hidden]{display:none !important}
   </style>
 </head>
 <body>
@@ -62,47 +67,177 @@
       <span class="count" id="count">0 teams</span>
     </div>
 
-    <div class="bar">
-      <button class="btn btn-green" id="export-csv">Download Excel (CSV)</button>
-      <button class="btn btn-blue" id="export">Export JSON (backup)</button>
-      <button class="btn btn-ghost" id="refresh">Refresh</button>
-      <button class="btn btn-red" id="clear">Clear all</button>
+    <!-- Login gate -->
+    <div class="login" id="login" hidden>
+      <div class="rtitle">Organizer login</div>
+      <input id="l-email" type="email" placeholder="Email" autocomplete="username" />
+      <input id="l-pass" type="password" placeholder="Password" autocomplete="current-password" />
+      <button class="btn btn-blue" id="l-btn">Sign in</button>
+      <p class="err" id="l-err"></p>
     </div>
 
-    <div class="results" id="results">
-      <div class="rtitle">Results &amp; Winners</div>
-      <div class="rgrid">
-        <label>Champion<select id="r-champion"></select></label>
-        <label>Runner-up<select id="r-runner"></select></label>
-        <label>Top scorer / MVP<input id="r-scorer" type="text" placeholder="Player name (optional)" /></label>
+    <!-- Admin panel -->
+    <div id="panel" hidden>
+      <div class="bar">
+        <button class="btn btn-green" id="toggle-reg">Registration: …</button>
+        <button class="btn btn-green" id="export-csv">Download Excel (CSV)</button>
+        <button class="btn btn-blue" id="export">Export JSON (backup)</button>
+        <button class="btn btn-ghost" id="refresh">Refresh</button>
+        <button class="btn btn-red" id="clear">Clear all</button>
+        <button class="btn btn-ghost" id="signout" hidden>Sign out</button>
       </div>
-      <button class="btn btn-blue" id="save-results">Save results</button>
-      <div class="winners" id="winners-banner"></div>
+
+      <div class="results" id="results">
+        <div class="rtitle">Results &amp; Winners</div>
+        <div class="rgrid">
+          <label>Champion<select id="r-champion"></select></label>
+          <label>Runner-up<select id="r-runner"></select></label>
+          <label>Top scorer / MVP<input id="r-scorer" type="text" placeholder="Player name (optional)" /></label>
+        </div>
+        <button class="btn btn-blue" id="save-results">Save results</button>
+        <div class="winners" id="winners-banner"></div>
+      </div>
+
+      <p class="note" id="mode-note"></p>
+
+      <div id="list"></div>
     </div>
-
-    <p class="note">Note: registrations and results are stored in <strong>this browser only</strong> (localStorage). To collect entries from teams on their own devices, connect the form to a backend. See <strong>README.md</strong> for setup.</p>
-
-    <div id="list"></div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js?v=1"></script>
   <script>
-    const KEY = 'elite5_registrations';
-    const list = document.getElementById('list');
-    const count = document.getElementById('count');
+    const KEY='elite5_registrations', RKEY='elite5_results', SKEY='elite5_settings';
+    const LOCAL_PASS='elite5'; // demo-mode passcode (change me). Real security comes with Supabase login.
+    let sb=null;
+    try{
+      if(window.ELITE5_SUPABASE_URL && window.ELITE5_SUPABASE_ANON_KEY && window.supabase){
+        sb=window.supabase.createClient(window.ELITE5_SUPABASE_URL, window.ELITE5_SUPABASE_ANON_KEY);
+      }
+    }catch(e){ sb=null; }
+    const cloud=!!sb;
 
-    function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
+    let regs=[], results={champion:'',runnerUp:'',topScorer:''}, settings={registration_open:true};
 
+    const $=s=>document.querySelector(s);
+    const list=$('#list'), count=$('#count');
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function igUrl(h){ const u=String(h||'').replace(/^@/,'').trim(); return u?'https://instagram.com/'+encodeURIComponent(u):''; }
     const JCOL={Red:'#e11d2a',Blue:'#1e5cff',Green:'#16a34a',Yellow:'#f5c518',Orange:'#f97316',Purple:'#7c3aed',Black:'#111111',White:'#ffffff'};
 
+    /* ---------- Auth gate ---------- */
+    function showLogin(){ $('#login').hidden=false; $('#panel').hidden=true; if(!cloud) $('#l-email').style.display='none'; }
+    function showPanel(){ $('#login').hidden=true; $('#panel').hidden=false; $('#signout').hidden=!cloud; }
+
+    async function init(){
+      if(cloud){
+        const {data}=await sb.auth.getSession();
+        if(data && data.session){ showPanel(); await loadAll(); }
+        else showLogin();
+      } else {
+        if(sessionStorage.getItem('e5_admin')==='1'){ showPanel(); loadLocal(); renderAll(); }
+        else showLogin();
+      }
+    }
+    $('#l-btn').addEventListener('click', async ()=>{
+      $('#l-err').textContent='';
+      if(cloud){
+        const {error}=await sb.auth.signInWithPassword({ email:$('#l-email').value.trim(), password:$('#l-pass').value });
+        if(error){ $('#l-err').textContent='Wrong email or password.'; return; }
+        showPanel(); await loadAll();
+      } else {
+        if($('#l-pass').value===LOCAL_PASS){ sessionStorage.setItem('e5_admin','1'); showPanel(); loadLocal(); renderAll(); }
+        else $('#l-err').textContent='Wrong password.';
+      }
+    });
+    $('#l-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('#l-btn').click(); });
+    $('#signout').addEventListener('click', async ()=>{ if(cloud) await sb.auth.signOut(); showLogin(); });
+
+    /* ---------- Data loading ---------- */
+    function loadLocal(){
+      try{ regs=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ regs=[]; }
+      try{ const r=JSON.parse(localStorage.getItem(RKEY)||'{}'); results={champion:r.champion||'',runnerUp:r.runnerUp||'',topScorer:r.topScorer||''}; }catch(e){}
+      try{ const s=JSON.parse(localStorage.getItem(SKEY)||'{}'); settings={registration_open: s.registration_open!==false}; }catch(e){}
+    }
+    async function loadAll(){
+      const r=await sb.from('registrations').select('*').order('created_at',{ascending:true});
+      const rows=r.data||[];
+      const paths=[];
+      rows.forEach(row=>(row.players||[]).forEach(p=>{ if(p.photo_path) paths.push(p.photo_path); }));
+      let urlMap={};
+      if(paths.length){
+        const su=await sb.storage.from('player-photos').createSignedUrls(paths,3600);
+        (su.data||[]).forEach(o=>{ if(o.signedUrl) urlMap[o.path]=o.signedUrl; });
+      }
+      regs=rows.map(row=>({
+        id:row.id, submittedAt:row.created_at,
+        team:{name:row.team_name, jerseyColor:row.jersey_color},
+        captainContact:{name:row.captain_name, phone:row.captain_phone, email:row.captain_email},
+        players:(row.players||[]).map(p=>({name:p.name,dob:p.dob,instagram:p.instagram,isCaptain:!!p.is_captain,photo:p.photo_path?urlMap[p.photo_path]:null}))
+      }));
+      const rr=await sb.from('results').select('*').eq('id',1).single();
+      results={champion:(rr.data&&rr.data.champion)||'', runnerUp:(rr.data&&rr.data.runner_up)||'', topScorer:(rr.data&&rr.data.top_scorer)||''};
+      const ss=await sb.from('settings').select('*').eq('id',1).single();
+      settings={registration_open: ss.data? !!ss.data.registration_open : true};
+      renderAll();
+    }
+
+    function teamName(id){ const t=regs.find(x=>x.id===id); return t&&t.team?t.team.name:''; }
+
+    /* ---------- Rendering ---------- */
+    function renderAll(){ renderToggle(); renderResults(); render(); $('#mode-note').innerHTML = cloud
+      ? 'Connected to Supabase — registrations from every device appear here.'
+      : 'Demo mode: data is stored in <strong>this browser only</strong>. Fill in <strong>supabase-config.js</strong> to go live (see README).'; }
+
+    function renderToggle(){
+      const b=$('#toggle-reg'), open=settings.registration_open;
+      b.textContent='Registration: '+(open?'OPEN':'CLOSED');
+      b.className='btn '+(open?'btn-green':'btn-red');
+    }
+    $('#toggle-reg').addEventListener('click', async ()=>{
+      const next=!settings.registration_open;
+      if(!confirm(next?'Open registration?':'Close registration? New teams will be blocked.')) return;
+      if(cloud){
+        const {error}=await sb.from('settings').update({registration_open:next}).eq('id',1);
+        if(error){ alert('Could not update: '+error.message); return; }
+      } else {
+        localStorage.setItem(SKEY, JSON.stringify({registration_open:next}));
+      }
+      settings.registration_open=next; renderToggle();
+    });
+
+    function renderResults(){
+      const opts='<option value="">— none —</option>'+regs.map(r=>`<option value="${esc(r.id)}">${esc(r.team&&r.team.name)}</option>`).join('');
+      const ch=$('#r-champion'), ru=$('#r-runner'), sc=$('#r-scorer');
+      ch.innerHTML=opts; ru.innerHTML=opts;
+      ch.value=results.champion||''; ru.value=results.runnerUp||''; sc.value=results.topScorer||'';
+      renderWinners();
+    }
+    function renderWinners(){
+      let h='';
+      if(results.champion) h+=`<div class="wchip champ">🏆 Champion: <b>${esc(teamName(results.champion))}</b></div>`;
+      if(results.runnerUp) h+=`<div class="wchip">Runner-up: <b>${esc(teamName(results.runnerUp))}</b></div>`;
+      if(results.topScorer) h+=`<div class="wchip">Top scorer / MVP: <b>${esc(results.topScorer)}</b></div>`;
+      $('#winners-banner').innerHTML=h;
+    }
+    $('#save-results').addEventListener('click', async ()=>{
+      const champion=$('#r-champion').value, runnerUp=$('#r-runner').value, topScorer=$('#r-scorer').value.trim();
+      if(champion && champion===runnerUp){ alert('Champion and runner-up must be different teams.'); return; }
+      if(cloud){
+        const {error}=await sb.from('results').update({champion:champion||null, runner_up:runnerUp||null, top_scorer:topScorer||null}).eq('id',1);
+        if(error){ alert('Could not save: '+error.message); return; }
+      } else {
+        localStorage.setItem(RKEY, JSON.stringify({champion,runnerUp,topScorer}));
+      }
+      results={champion,runnerUp,topScorer};
+      renderResults(); render();
+    });
+
     function render(){
-      const data = load();
-      const res = loadResults();
-      count.textContent = data.length + (data.length===1?' team':' teams');
-      if(!data.length){ list.innerHTML='<div class="empty">No registrations yet. Entries submitted on this device will appear here.</div>'; return; }
-      list.innerHTML = data.map(r=>{
-        const placement = res.champion===r.id?'<span class="placement champ">CHAMPION</span>':(res.runnerUp===r.id?'<span class="placement run">RUNNER-UP</span>':'');
+      count.textContent = regs.length + (regs.length===1?' team':' teams');
+      if(!regs.length){ list.innerHTML='<div class="empty">No registrations yet.</div>'; return; }
+      list.innerHTML = regs.map(r=>{
+        const placement = results.champion===r.id?'<span class="placement champ">CHAMPION</span>':(results.runnerUp===r.id?'<span class="placement run">RUNNER-UP</span>':'');
         return `
         <div class="team">
           <div class="team-head">
@@ -133,44 +268,14 @@
       }).join('');
     }
 
-    /* ---- Results / winners ---- */
-    const RKEY='elite5_results';
-    function loadResults(){ try{ return JSON.parse(localStorage.getItem(RKEY)||'{}'); }catch(e){ return {}; } }
-    function saveResults(r){ localStorage.setItem(RKEY, JSON.stringify(r)); }
-    function teamName(id){ const t=load().find(x=>x.id===id); return t&&t.team?t.team.name:''; }
-
-    function renderResults(){
-      const data=load(), res=loadResults();
-      const opts='<option value="">— none —</option>'+data.map(r=>`<option value="${esc(r.id)}">${esc(r.team&&r.team.name)}</option>`).join('');
-      const ch=document.getElementById('r-champion'), ru=document.getElementById('r-runner'), sc=document.getElementById('r-scorer');
-      ch.innerHTML=opts; ru.innerHTML=opts;
-      ch.value=res.champion||''; ru.value=res.runnerUp||''; sc.value=res.topScorer||'';
-      renderWinners();
-    }
-    function renderWinners(){
-      const res=loadResults(); let h='';
-      if(res.champion) h+=`<div class="wchip champ">🏆 Champion: <b>${esc(teamName(res.champion))}</b></div>`;
-      if(res.runnerUp) h+=`<div class="wchip">Runner-up: <b>${esc(teamName(res.runnerUp))}</b></div>`;
-      if(res.topScorer) h+=`<div class="wchip">Top scorer / MVP: <b>${esc(res.topScorer)}</b></div>`;
-      document.getElementById('winners-banner').innerHTML=h;
-    }
-    document.getElementById('save-results').addEventListener('click', ()=>{
-      const champion=document.getElementById('r-champion').value;
-      const runnerUp=document.getElementById('r-runner').value;
-      if(champion && champion===runnerUp){ alert('Champion and runner-up must be different teams.'); return; }
-      saveResults({ champion, runnerUp, topScorer:document.getElementById('r-scorer').value.trim() });
-      renderResults(); render();
-    });
-
-    /* ---- Excel (CSV) export ---- */
+    /* ---------- Exports ---------- */
     function csvCell(v){ v=String(v==null?'':v); return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
-    function exportCSV(){
-      const data=load(), res=loadResults();
-      if(!data.length){ alert('No registrations to export yet.'); return; }
+    $('#export-csv').addEventListener('click', ()=>{
+      if(!regs.length){ alert('No registrations to export yet.'); return; }
       const headers=['Team','Jersey Color','Placement','Registered At','Captain Contact','Captain Phone','Captain Email','Player Name','Player DOB','Player Instagram','Team Captain'];
       const rows=[headers];
-      data.forEach(r=>{
-        const placement=res.champion===r.id?'Champion':(res.runnerUp===r.id?'Runner-up':'');
+      regs.forEach(r=>{
+        const placement=results.champion===r.id?'Champion':(results.runnerUp===r.id?'Runner-up':'');
         (r.players||[]).forEach(p=>{
           rows.push([ r.team&&r.team.name, r.team&&r.team.jerseyColor, placement, new Date(r.submittedAt).toLocaleString(),
             r.captainContact.name, r.captainContact.phone, r.captainContact.email,
@@ -181,22 +286,28 @@
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download='elite5_teams.csv'; a.click(); URL.revokeObjectURL(a.href);
-    }
-    document.getElementById('export-csv').addEventListener('click', exportCSV);
-
-    document.getElementById('refresh').addEventListener('click', ()=>{ renderResults(); render(); });
-    document.getElementById('export').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify({registrations:load(),results:loadResults()},null,2)],{type:'application/json'});
+    });
+    $('#export').addEventListener('click', ()=>{
+      const blob=new Blob([JSON.stringify({registrations:regs,results},null,2)],{type:'application/json'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download='elite5_registrations.json'; a.click(); URL.revokeObjectURL(a.href);
     });
-    document.getElementById('clear').addEventListener('click', ()=>{
-      if(confirm('Delete ALL registrations AND results stored in this browser? This cannot be undone.')){
-        localStorage.removeItem(KEY); localStorage.removeItem(RKEY); renderResults(); render();
+
+    /* ---------- Refresh / clear ---------- */
+    $('#refresh').addEventListener('click', async ()=>{ if(cloud) await loadAll(); else { loadLocal(); renderAll(); } });
+    $('#clear').addEventListener('click', async ()=>{
+      if(!confirm('Delete ALL registrations? This cannot be undone.')) return;
+      if(cloud){
+        const {error}=await sb.from('registrations').delete().neq('id','');
+        if(error){ alert('Could not delete: '+error.message); return; }
+        await loadAll();
+      } else {
+        localStorage.removeItem(KEY); localStorage.removeItem(RKEY);
+        loadLocal(); renderAll();
       }
     });
-    renderResults();
-    render();
+
+    init();
   </script>
 </body>
 </html>
