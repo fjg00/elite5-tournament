@@ -363,7 +363,8 @@
           setStatus('Registration is currently closed.', 'error');
           refreshRemote();
         } else {
-          setStatus('Could not submit. Check your internet connection and try again.', 'error');
+          console.error('Submit failed:', err);
+          setStatus('Could not submit: ' + (m || 'connection error') + ' — please try again.', 'error');
         }
       });
     } else {

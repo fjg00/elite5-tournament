@@ -81,6 +81,7 @@
       <div class="bar">
         <button class="btn btn-green" id="toggle-reg">Registration: …</button>
         <button class="btn btn-green" id="export-csv">Download Excel (CSV)</button>
+        <button class="btn btn-blue" id="export-photos">Download photos (ZIP)</button>
         <button class="btn btn-blue" id="export">Export JSON (backup)</button>
         <button class="btn btn-ghost" id="refresh">Refresh</button>
         <button class="btn btn-red" id="clear">Clear all</button>
@@ -105,6 +106,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3/dist/jszip.min.js"></script>
   <script src="supabase-config.js?v=1"></script>
   <script>
     const KEY='elite5_registrations', RKEY='elite5_results', SKEY='elite5_settings';
@@ -286,6 +288,28 @@
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download='elite5_teams.csv'; a.click(); URL.revokeObjectURL(a.href);
+    });
+    function safeName(s){ return String(s||'player').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_') || 'player'; }
+    $('#export-photos').addEventListener('click', async ()=>{
+      const withPhotos=regs.filter(r=>(r.players||[]).some(p=>p.photo));
+      if(!withPhotos.length){ alert('No photos to download yet.'); return; }
+      const b=$('#export-photos'); b.disabled=true; b.textContent='Preparing ZIP…';
+      try{
+        const zip=new JSZip();
+        for(const r of regs){
+          const folder=zip.folder(safeName(r.team&&r.team.name));
+          for(const p of (r.players||[])){
+            if(!p.photo) continue;
+            const resp=await fetch(p.photo);
+            const blob=await resp.blob();
+            folder.file(safeName(p.name)+(p.isCaptain?'_CAPTAIN':'')+'.jpg', blob);
+          }
+        }
+        const out=await zip.generateAsync({type:'blob'});
+        const a=document.createElement('a'); a.href=URL.createObjectURL(out);
+        a.download='elite5_player_photos.zip'; a.click(); URL.revokeObjectURL(a.href);
+      }catch(e){ alert('Could not build ZIP: '+e.message); }
+      b.disabled=false; b.textContent='Download photos (ZIP)';
     });
     $('#export').addEventListener('click', ()=>{
       const blob=new Blob([JSON.stringify({registrations:regs,results},null,2)],{type:'application/json'});
