@@ -362,6 +362,9 @@
         } else if (/Registration closed/i.test(m)) {
           setStatus('Registration is currently closed.', 'error');
           refreshRemote();
+        } else if (/row-level security/i.test(m)) {
+          console.error('Submit failed:', err);
+          setStatus('Could not submit: the server rejected the request. (Organizer: make sure supabase-setup.sql has been run.)', 'error');
         } else {
           console.error('Submit failed:', err);
           setStatus('Could not submit: ' + (m || 'connection error') + ' — please try again.', 'error');
