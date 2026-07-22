@@ -222,6 +222,29 @@ a { color: inherit; text-decoration: none; }
 .form-status { margin-top: 16px; font-weight: 700; text-align: center; min-height: 1.2em; font-family: 'Oswald', sans-serif; letter-spacing: 1px; }
 .form-status.error { color: var(--pink); }
 
+/* Squad — add one at a time */
+.roster { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.roster-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: var(--bg-2); border: 2px solid var(--line-soft); }
+.roster-row.is-captain { border-color: var(--pink); }
+.roster-photo { width: 46px; height: 46px; object-fit: cover; border: 2px solid var(--ink); flex-shrink: 0; }
+.roster-info { flex: 1; min-width: 0; }
+.roster-name { font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; font-size: .95rem; display: flex; align-items: center; gap: 8px; }
+.cap-tag { font-size: .62rem; background: var(--pink); color: #fff; padding: 2px 6px; letter-spacing: 1px; }
+.roster-sub { color: var(--muted); font-size: .82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.roster-cap, .roster-del { display: grid; place-items: center; width: 34px; height: 34px; border: 2px solid var(--line-soft); background: var(--white); cursor: pointer; flex-shrink: 0; }
+.roster-cap { color: var(--muted-2); }
+.roster-row.is-captain .roster-cap { color: var(--pink); border-color: var(--pink); }
+.roster-cap:hover { color: var(--pink); border-color: var(--pink); }
+.roster-del { color: var(--pink); border-color: var(--pink); }
+.roster-del:hover { background: var(--pink); color: var(--white); }
+.roster-count { font-family: 'Oswald', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; font-size: .85rem; color: var(--muted); margin-bottom: 18px; }
+.roster-count strong { color: var(--pink); font-size: 1.1rem; }
+.roster-min { color: var(--muted-2); }
+.add-card { border: 2px dashed var(--line-soft); padding: 18px; margin-bottom: 4px; }
+.add-card.hidden { display: none; }
+.add-title { font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; font-size: .9rem; color: var(--ink); margin-bottom: 14px; }
+.add-card .btn-add { margin-top: 4px; }
+
 /* Success */
 .reg-success { text-align: center; padding: 20px 6px; animation: fade .35s ease; }
 .reg-success .tick { display: inline-grid; place-items: center; width: 78px; height: 78px; background: var(--blue); color: var(--white); margin-bottom: 14px; box-shadow: var(--hard); }
@@ -236,7 +259,7 @@ a { color: inherit; text-decoration: none; }
 .host-label { display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--white); background: var(--blue); padding: 4px 12px; margin-bottom: 8px; }
 .host-partner h3 { font-family: 'Oswald', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 1.25rem; letter-spacing: .5px; margin-bottom: 2px; color: var(--ink); }
 .host-partner p { color: var(--muted); font-size: .92rem; }
-.sponsors-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; justify-items: center; align-items: center; }
+.sponsors-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; justify-items: center; align-items: center; }
 .sponsor-card { width: 132px; height: 132px; border-radius: 50%; overflow: hidden; background: var(--white); border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--blue); }
 .sponsor-card img { width: 100%; height: 100%; object-fit: cover; }
 

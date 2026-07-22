@@ -38,6 +38,18 @@
     .cap{display:inline-block;background:var(--red);color:#fff;font-size:.7rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-top:6px}
     .note{color:var(--muted);font-size:.85rem;margin-top:8px}
     a.back{color:var(--blue);font-weight:700;text-decoration:none}
+    .btn-green{background:#16a34a;color:#fff}
+    .results{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
+    .rtitle{font-family:'Anton',sans-serif;color:var(--blue);font-size:1.3rem;margin-bottom:14px;letter-spacing:.5px}
+    .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:14px}
+    .rgrid label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .rgrid select,.rgrid input{padding:10px;border:1.5px solid var(--line);border-radius:8px;font-size:.95rem;font-family:inherit;background:#fff}
+    .winners{margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+    .wchip{border-radius:10px;padding:9px 14px;font-weight:700;font-size:.95rem;background:#eef1fb;border:1px solid #c7cde0}
+    .wchip.champ{background:#fff7e6;border-color:#f5c518}
+    .placement{display:inline-block;font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:999px;margin-left:10px;vertical-align:middle}
+    .placement.champ{background:#f5c518;color:#3a2e00}
+    .placement.run{background:#c7cde0;color:#1a2036}
   </style>
 </head>
 <body>
@@ -51,12 +63,24 @@
     </div>
 
     <div class="bar">
-      <button class="btn btn-blue" id="export">⬇ Export all (JSON)</button>
-      <button class="btn btn-ghost" id="refresh">↻ Refresh</button>
-      <button class="btn btn-red" id="clear">🗑 Clear all</button>
+      <button class="btn btn-green" id="export-csv">Download Excel (CSV)</button>
+      <button class="btn btn-blue" id="export">Export JSON (backup)</button>
+      <button class="btn btn-ghost" id="refresh">Refresh</button>
+      <button class="btn btn-red" id="clear">Clear all</button>
     </div>
 
-    <p class="note">Note: registrations submitted through this website are stored in <strong>this browser only</strong> (localStorage). To collect entries from teams across Lebanon on their own devices, connect the form to a backend. See <strong>README.md</strong> for setup.</p>
+    <div class="results" id="results">
+      <div class="rtitle">Results &amp; Winners</div>
+      <div class="rgrid">
+        <label>Champion<select id="r-champion"></select></label>
+        <label>Runner-up<select id="r-runner"></select></label>
+        <label>Top scorer / MVP<input id="r-scorer" type="text" placeholder="Player name (optional)" /></label>
+      </div>
+      <button class="btn btn-blue" id="save-results">Save results</button>
+      <div class="winners" id="winners-banner"></div>
+    </div>
+
+    <p class="note">Note: registrations and results are stored in <strong>this browser only</strong> (localStorage). To collect entries from teams on their own devices, connect the form to a backend. See <strong>README.md</strong> for setup.</p>
 
     <div id="list"></div>
   </div>
@@ -74,13 +98,16 @@
 
     function render(){
       const data = load();
+      const res = loadResults();
       count.textContent = data.length + (data.length===1?' team':' teams');
       if(!data.length){ list.innerHTML='<div class="empty">No registrations yet. Entries submitted on this device will appear here.</div>'; return; }
-      list.innerHTML = data.map(r=>`
+      list.innerHTML = data.map(r=>{
+        const placement = res.champion===r.id?'<span class="placement champ">CHAMPION</span>':(res.runnerUp===r.id?'<span class="placement run">RUNNER-UP</span>':'');
+        return `
         <div class="team">
           <div class="team-head">
             <div>
-              <div class="team-name">${esc(r.team && r.team.name)}</div>
+              <div class="team-name">${esc(r.team && r.team.name)}${placement}</div>
               ${r.team&&r.team.jerseyColor?`<div class="team-jersey"><span class="jersey-dot" style="background:${JCOL[r.team.jerseyColor]||'#ccc'}"></span>${esc(r.team.jerseyColor)} jersey</div>`:''}
               <div class="team-meta">${esc(r.id)} · ${new Date(r.submittedAt).toLocaleString()}</div>
             </div>
@@ -102,20 +129,73 @@
                 </div>
               </div>`).join('')}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
-    document.getElementById('refresh').addEventListener('click', render);
+    /* ---- Results / winners ---- */
+    const RKEY='elite5_results';
+    function loadResults(){ try{ return JSON.parse(localStorage.getItem(RKEY)||'{}'); }catch(e){ return {}; } }
+    function saveResults(r){ localStorage.setItem(RKEY, JSON.stringify(r)); }
+    function teamName(id){ const t=load().find(x=>x.id===id); return t&&t.team?t.team.name:''; }
+
+    function renderResults(){
+      const data=load(), res=loadResults();
+      const opts='<option value="">— none —</option>'+data.map(r=>`<option value="${esc(r.id)}">${esc(r.team&&r.team.name)}</option>`).join('');
+      const ch=document.getElementById('r-champion'), ru=document.getElementById('r-runner'), sc=document.getElementById('r-scorer');
+      ch.innerHTML=opts; ru.innerHTML=opts;
+      ch.value=res.champion||''; ru.value=res.runnerUp||''; sc.value=res.topScorer||'';
+      renderWinners();
+    }
+    function renderWinners(){
+      const res=loadResults(); let h='';
+      if(res.champion) h+=`<div class="wchip champ">🏆 Champion: <b>${esc(teamName(res.champion))}</b></div>`;
+      if(res.runnerUp) h+=`<div class="wchip">Runner-up: <b>${esc(teamName(res.runnerUp))}</b></div>`;
+      if(res.topScorer) h+=`<div class="wchip">Top scorer / MVP: <b>${esc(res.topScorer)}</b></div>`;
+      document.getElementById('winners-banner').innerHTML=h;
+    }
+    document.getElementById('save-results').addEventListener('click', ()=>{
+      const champion=document.getElementById('r-champion').value;
+      const runnerUp=document.getElementById('r-runner').value;
+      if(champion && champion===runnerUp){ alert('Champion and runner-up must be different teams.'); return; }
+      saveResults({ champion, runnerUp, topScorer:document.getElementById('r-scorer').value.trim() });
+      renderResults(); render();
+    });
+
+    /* ---- Excel (CSV) export ---- */
+    function csvCell(v){ v=String(v==null?'':v); return /[",\r\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+    function exportCSV(){
+      const data=load(), res=loadResults();
+      if(!data.length){ alert('No registrations to export yet.'); return; }
+      const headers=['Team','Jersey Color','Placement','Registered At','Captain Contact','Captain Phone','Captain Email','Player Name','Player DOB','Player Instagram','Team Captain'];
+      const rows=[headers];
+      data.forEach(r=>{
+        const placement=res.champion===r.id?'Champion':(res.runnerUp===r.id?'Runner-up':'');
+        (r.players||[]).forEach(p=>{
+          rows.push([ r.team&&r.team.name, r.team&&r.team.jerseyColor, placement, new Date(r.submittedAt).toLocaleString(),
+            r.captainContact.name, r.captainContact.phone, r.captainContact.email,
+            p.name, p.dob, p.instagram, p.isCaptain?'Yes':'No' ]);
+        });
+      });
+      const csv='﻿'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='elite5_teams.csv'; a.click(); URL.revokeObjectURL(a.href);
+    }
+    document.getElementById('export-csv').addEventListener('click', exportCSV);
+
+    document.getElementById('refresh').addEventListener('click', ()=>{ renderResults(); render(); });
     document.getElementById('export').addEventListener('click', ()=>{
-      const blob = new Blob([JSON.stringify(load(),null,2)],{type:'application/json'});
+      const blob = new Blob([JSON.stringify({registrations:load(),results:loadResults()},null,2)],{type:'application/json'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
       a.download='elite5_registrations.json'; a.click(); URL.revokeObjectURL(a.href);
     });
     document.getElementById('clear').addEventListener('click', ()=>{
-      if(confirm('Delete ALL registrations stored in this browser? This cannot be undone.')){
-        localStorage.removeItem(KEY); render();
+      if(confirm('Delete ALL registrations AND results stored in this browser? This cannot be undone.')){
+        localStorage.removeItem(KEY); localStorage.removeItem(RKEY); renderResults(); render();
       }
     });
+    renderResults();
     render();
   </script>
 </body>

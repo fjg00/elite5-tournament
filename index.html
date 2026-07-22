@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=5" />
 </head>
 <body>
 
@@ -153,9 +153,42 @@
         <!-- STEP 3: Squad -->
         <div class="form-step" data-step="3">
           <h3 class="step-title">Your squad</h3>
-          <p class="step-hint">Add <strong>5–8 players</strong> (5 starters + up to 3 subs). Each needs a photo and DOB (ages 15–17). Instagram is optional. Tap the star to set your captain.</p>
-          <div id="players-list"></div>
-          <button type="button" id="add-player" class="btn btn-add">+ Add player</button>
+          <p class="step-hint">Add players one at a time — <strong>5 to 8</strong> (5 starters + up to 3 subs). Photo and date of birth are required; Instagram is optional. Tap a star to set your captain.</p>
+
+          <!-- Added players -->
+          <div id="roster" class="roster"></div>
+          <p class="roster-count"><strong id="roster-count">0</strong> / 8 added <span class="roster-min">· minimum 5</span></p>
+
+          <!-- Add-one form -->
+          <div class="add-card" id="add-card">
+            <div class="add-title">Add a player</div>
+            <div class="player-body">
+              <label class="photo-drop">
+                <input type="file" accept="image/*" class="np-photo" />
+                <span class="photo-placeholder"><svg class="ico ico-md"><use href="#i-camera"/></svg><br />Photo</span>
+                <img class="np-preview photo-preview" alt="" hidden />
+              </label>
+              <div class="player-fields">
+                <div class="field">
+                  <label>Full Name <span class="req">*</span></label>
+                  <input type="text" class="np-name" placeholder="Player full name" autocomplete="off" />
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label>Date of Birth <span class="req">*</span></label>
+                    <input type="date" class="np-dob" min="2009-01-01" max="2011-12-31" />
+                  </div>
+                  <div class="field">
+                    <label>Instagram <span class="opt">optional</span></label>
+                    <input type="text" class="np-instagram" placeholder="@username" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="add-to-roster" class="btn btn-add">+ Add player to squad</button>
+            <p id="add-status" class="form-status" role="status" aria-live="polite"></p>
+          </div>
+
           <label class="agree-check">
             <input type="checkbox" id="agree" name="agree" required />
             <span>I confirm all players are aged 15–17 (born 2009–2011) and the info is accurate. <span class="req">*</span></span>
@@ -210,6 +243,7 @@
         <div class="sponsor-card"><img src="Sponsors/MarkoExpress.jpeg" alt="Marko Express" /></div>
         <div class="sponsor-card"><img src="Sponsors/beysneaks_square.jpeg" alt="Bey Sneaks" /></div>
         <div class="sponsor-card"><img src="Sponsors/Farfour_square.jpeg" alt="M. Farfour Pharmacy" /></div>
+        <div class="sponsor-card"><img src="Sponsors/berdawni_square.jpg" alt="Berdawni Natural Mineral Water" /></div>
       </div>
     </div>
   </section>
@@ -239,46 +273,6 @@
     </div>
   </footer>
 
-  <!-- Player template -->
-  <template id="player-template">
-    <div class="player-card" data-player>
-      <div class="player-head">
-        <span class="player-index">Player</span>
-        <button type="button" class="player-remove" aria-label="Remove player">
-          <svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-      <div class="player-body">
-        <label class="photo-drop">
-          <input type="file" accept="image/*" class="p-photo" />
-          <span class="photo-placeholder"><svg class="ico ico-md"><use href="#i-camera"/></svg><br />Photo</span>
-          <img class="photo-preview" alt="" hidden />
-        </label>
-        <div class="player-fields">
-          <div class="field">
-            <label>Full Name <span class="req">*</span></label>
-            <input type="text" class="p-name" placeholder="Player full name" autocomplete="off" />
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label>Date of Birth <span class="req">*</span></label>
-              <input type="date" class="p-dob" min="2009-01-01" max="2011-12-31" />
-            </div>
-            <div class="field">
-              <label>Instagram <span class="opt">optional</span></label>
-              <input type="text" class="p-instagram" placeholder="@username" autocomplete="off" />
-            </div>
-          </div>
-          <label class="captain-check">
-            <input type="radio" name="captain" class="p-captain" />
-            <svg class="ico ico-sm ico-fill star"><use href="#i-star"/></svg>
-            <span>Team Captain</span>
-          </label>
-        </div>
-      </div>
-    </div>
-  </template>
-
-  <script src="script.js?v=3"></script>
+  <script src="script.js?v=5"></script>
 </body>
 </html>

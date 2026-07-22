@@ -6,7 +6,7 @@
   var MIN_PLAYERS = 5;
   var MAX_PLAYERS = 8;
   var TOTAL_SPOTS = 8;
-  var TEAMS_ALREADY_REGISTERED = 3; // set to the real count of confirmed teams
+  var TEAMS_ALREADY_REGISTERED = 0; // extra teams already confirmed offline; the tracker adds live registrations on top
   var STORAGE_KEY = 'elite5_registrations';
 
   var $ = function (s, r) { return (r || document).querySelector(s); };
@@ -80,33 +80,75 @@
   buildColors();
 
   /* ---------- Player rows ---------- */
-  var list = $('#players-list');
-  var template = $('#player-template');
-  var addBtn = $('#add-player');
+  var roster = [];
+  var rosterEl = $('#roster');
+  var rosterCountEl = $('#roster-count');
+  var addCard = $('#add-card');
+  var addToRosterBtn = $('#add-to-roster');
+  var addStatus = $('#add-status');
+  var npName = $('.np-name'), npDob = $('.np-dob'), npIg = $('.np-instagram');
+  var npPhotoInput = $('.np-photo'), npPreview = $('.np-preview');
+  var npPlaceholder = addCard ? $('.photo-placeholder', addCard) : null;
+  var pendingPhoto = null;
 
-  function reindex() {
-    $$('[data-player]', list).forEach(function (card, i) {
-      $('.player-index', card).textContent = 'Player ' + (i + 1);
+  function esc2(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function setAddStatus(msg, type) { if (!addStatus) return; addStatus.textContent = msg || ''; addStatus.className = 'form-status' + (type ? ' ' + type : ''); }
+
+  if (npPhotoInput) npPhotoInput.addEventListener('change', function () {
+    var file = npPhotoInput.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) { pendingPhoto = e.target.result; npPreview.src = pendingPhoto; npPreview.hidden = false; if (npPlaceholder) npPlaceholder.style.display = 'none'; };
+    reader.readAsDataURL(file);
+  });
+
+  function renderRoster() {
+    if (!rosterEl) return;
+    rosterEl.innerHTML = '';
+    roster.forEach(function (p, idx) {
+      var row = document.createElement('div');
+      row.className = 'roster-row' + (p.isCaptain ? ' is-captain' : '');
+      row.innerHTML =
+        '<img class="roster-photo" src="' + p.photo + '" alt="">' +
+        '<div class="roster-info"><div class="roster-name">' + esc2(p.name) + (p.isCaptain ? ' <span class="cap-tag">Captain</span>' : '') + '</div>' +
+        '<div class="roster-sub">' + esc2(p.dob) + (p.instagram ? ' · ' + esc2(p.instagram) : '') + '</div></div>' +
+        '<button type="button" class="roster-cap" title="Set as captain" aria-label="Set as captain"><svg class="ico ico-sm ico-fill"><use href="#i-star"/></svg></button>' +
+        '<button type="button" class="roster-del" title="Remove player" aria-label="Remove player"><svg class="ico ico-sm" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+      row.querySelector('.roster-cap').addEventListener('click', function () { setCaptain(idx); });
+      row.querySelector('.roster-del').addEventListener('click', function () { removeFromRoster(idx); });
+      rosterEl.appendChild(row);
     });
+    if (rosterCountEl) rosterCountEl.textContent = roster.length;
+    if (addToRosterBtn) {
+      var full = roster.length >= MAX_PLAYERS;
+      addToRosterBtn.disabled = full;
+      addToRosterBtn.textContent = full ? 'Squad full (8 max)' : '+ Add player to squad';
+      if (addCard) addCard.classList.toggle('hidden', full);
+    }
   }
-  function addPlayer() {
-    if (list.children.length >= MAX_PLAYERS) { setStatus('Maximum of ' + MAX_PLAYERS + ' players.', 'error'); return; }
-    var card = template.content.cloneNode(true).querySelector('[data-player]');
-    var fileInput = $('.p-photo', card), preview = $('.photo-preview', card), ph = $('.photo-placeholder', card);
-    fileInput.addEventListener('change', function () {
-      var file = fileInput.files[0]; if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) { preview.src = e.target.result; preview.hidden = false; ph.style.display = 'none'; card.dataset.photo = e.target.result; };
-      reader.readAsDataURL(file);
-    });
-    $('.player-remove', card).addEventListener('click', function () {
-      if (list.children.length <= 1) return;
-      card.remove(); reindex();
-    });
-    list.appendChild(card); reindex();
+  function setCaptain(idx) { roster.forEach(function (p, i) { p.isCaptain = (i === idx); }); renderRoster(); }
+  function removeFromRoster(idx) { var wasCap = roster[idx].isCaptain; roster.splice(idx, 1); if (wasCap && roster.length) roster[0].isCaptain = true; renderRoster(); }
+  function clearAddForm() {
+    npName.value = ''; npDob.value = ''; npIg.value = ''; pendingPhoto = null;
+    npPreview.hidden = true; npPreview.removeAttribute('src'); if (npPlaceholder) npPlaceholder.style.display = '';
+    npPhotoInput.value = ''; npName.classList.remove('invalid'); npDob.classList.remove('invalid');
   }
-  if (addBtn) addBtn.addEventListener('click', addPlayer);
-  for (var i = 0; i < MIN_PLAYERS; i++) addPlayer();
+  if (addToRosterBtn) addToRosterBtn.addEventListener('click', function () {
+    if (roster.length >= MAX_PLAYERS) return;
+    var name = npName.value.trim(), dob = npDob.value;
+    var nameBad = !name, dobBad = !dobInRange(dob), photoBad = !pendingPhoto;
+    npName.classList.toggle('invalid', nameBad);
+    npDob.classList.toggle('invalid', dobBad);
+    if (nameBad || dobBad || photoBad) {
+      setAddStatus(photoBad ? 'Add a photo for this player.' : (dobBad ? 'Date of birth must be 2009–2011.' : 'Enter the player\'s name.'), 'error');
+      return;
+    }
+    roster.push({ name: name, dob: dob, instagram: npIg.value.trim(), photo: pendingPhoto, isCaptain: roster.length === 0 });
+    clearAddForm();
+    setAddStatus('');
+    renderRoster();
+    npName.focus();
+  });
+  renderRoster();
 
   /* ---------- Wizard ---------- */
   var form = $('#registration-form');
@@ -156,32 +198,13 @@
     return true;
   }
 
-  function collect() {
-    return $$('[data-player]', list).map(function (card) {
-      return {
-        name: $('.p-name', card).value.trim(),
-        dob: $('.p-dob', card).value,
-        instagram: $('.p-instagram', card).value.trim(),
-        isCaptain: $('.p-captain', card).checked,
-        photo: card.dataset.photo || null,
-        _card: card
-      };
-    });
-  }
-
   function validateSquad() {
-    var players = collect(), ok = true, firstErr = '';
-    if (players.length < MIN_PLAYERS) { ok = false; firstErr = 'Add at least ' + MIN_PLAYERS + ' players.'; }
-    players.forEach(function (p) {
-      var nameBad = !p.name, dobBad = !dobInRange(p.dob), photoBad = !p.photo;
-      markInvalid($('.p-name', p._card), nameBad);
-      markInvalid($('.p-dob', p._card), dobBad);
-      if (nameBad || dobBad || photoBad) { ok = false; if (!firstErr) firstErr = photoBad ? 'Add a photo for ' + (p.name || 'each player') + '.' : (dobBad ? (p.name || 'A player') + ' must be born 2009–2011.' : 'Complete every player\'s details.'); }
-    });
-    if (!players.some(function (p) { return p.isCaptain; })) { ok = false; if (!firstErr) firstErr = 'Tap ⭐ to choose your captain.'; }
+    var ok = true, firstErr = '';
+    if (roster.length < MIN_PLAYERS) { ok = false; firstErr = 'Add at least ' + MIN_PLAYERS + ' players (you have ' + roster.length + ').'; }
+    else if (!roster.some(function (p) { return p.isCaptain; })) { ok = false; firstErr = 'Tap a star to choose your captain.'; }
     if (!$('#agree').checked) { ok = false; if (!firstErr) firstErr = 'Please confirm the eligibility statement.'; }
-    if (!ok) { setStatus(firstErr, 'error'); var bad = form.querySelector('.form-step[data-step="3"] .invalid'); if (bad) bad.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-    return { ok: ok, players: players };
+    if (!ok) setStatus(firstErr, 'error');
+    return { ok: ok, players: roster };
   }
 
   $$('.next-step', form).forEach(function (b) { b.addEventListener('click', function () { if (validateStep(current)) showStep(current + 1); }); });
