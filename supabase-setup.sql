@@ -86,7 +86,8 @@ create or replace function public.enforce_limits()
 returns trigger language plpgsql security definer set search_path = public as
 $$
 begin
-  if (select count(*) from public.registrations) >= 8 then
+  -- 8 main spots + 3 waitlist places = 11 total
+  if (select count(*) from public.registrations) >= 11 then
     raise exception 'Registration full';
   end if;
   if coalesce((select registration_open from public.settings where id = 1), true) = false then

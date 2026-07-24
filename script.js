@@ -5,6 +5,8 @@
   var MIN_PLAYERS = 5;
   var MAX_PLAYERS = 8;
   var TOTAL_SPOTS = 8;
+  var WAITLIST_MAX = 3;
+  var HARD_CAP = TOTAL_SPOTS + WAITLIST_MAX; // 11: 8 spots + 3 waitlist
   var STORAGE_KEY = 'elite5_registrations';
   var SETTINGS_KEY = 'elite5_settings';
 
@@ -52,8 +54,10 @@
     if (countEl) countEl.textContent = count;
     if (fillEl) fillEl.style.width = (count / TOTAL_SPOTS * 100) + '%';
     if (noteEl) {
+      var wlLeft = HARD_CAP - Math.min(teamCount, HARD_CAP);
       if (!registrationOpen) { noteEl.textContent = 'Registration is currently closed.'; noteEl.classList.add('hot'); }
-      else if (left <= 0) { noteEl.textContent = 'All spots claimed. Registration full.'; noteEl.classList.add('hot'); }
+      else if (teamCount >= HARD_CAP) { noteEl.textContent = 'All spots and the waitlist are full.'; noteEl.classList.add('hot'); }
+      else if (teamCount >= TOTAL_SPOTS) { noteEl.textContent = 'Main spots full — ' + wlLeft + ' waitlist spot' + (wlLeft === 1 ? '' : 's') + ' left.'; noteEl.classList.add('hot'); }
       else if (left <= 3) { noteEl.textContent = 'Only ' + left + ' spot' + (left === 1 ? '' : 's') + ' left. Going fast.'; noteEl.classList.add('hot'); }
       else { noteEl.textContent = left + ' of ' + TOTAL_SPOTS + ' spots still open.'; noteEl.classList.remove('hot'); }
     }
@@ -62,9 +66,11 @@
   function applyOpenState() {
     var regForm = $('#registration-form');
     if (!regForm) return;
-    var full = teamCount >= TOTAL_SPOTS;
+    var full = teamCount >= HARD_CAP;              // spots AND waitlist full
+    var onWaitlist = teamCount >= TOTAL_SPOTS && !full;
     var blocked = !registrationOpen || full;
     var panel = $('#reg-closed');
+
     if (blocked) {
       regForm.style.display = 'none';
       if (!panel) {
@@ -74,11 +80,27 @@
         regForm.parentElement.appendChild(panel);
       }
       panel.innerHTML =
-        '<h3 class="step-title">' + (full ? 'All 8 spots are taken' : 'Registration is closed') + '</h3>' +
-        '<p class="step-hint">' + (full ? 'The bracket is full. Follow the tournament for the next edition.' : 'Check back soon — registration will reopen.') + '</p>';
+        '<h3 class="step-title">' + (full ? 'Registration is full' : 'Registration is closed') + '</h3>' +
+        '<p class="step-hint">' + (full ? 'All 8 spots and the 3 waitlist places are taken. Follow us for the next edition.' : 'Check back soon — registration will reopen.') + '</p>';
     } else {
       regForm.style.display = '';
       if (panel) panel.remove();
+    }
+
+    // Waitlist notice above the form
+    var wl = $('#waitlist-banner');
+    if (onWaitlist && !blocked) {
+      if (!wl) {
+        wl = document.createElement('div');
+        wl.id = 'waitlist-banner';
+        wl.className = 'waitlist-note';
+        regForm.parentElement.insertBefore(wl, regForm);
+      }
+      var wlLeft = HARD_CAP - teamCount;
+      wl.innerHTML = '<strong>The 8 main spots are full.</strong> You can still register to join the <strong>waitlist</strong> — ' +
+        wlLeft + ' of ' + WAITLIST_MAX + ' places left. If a spot opens up, waitlisted teams get called first.';
+    } else if (wl) {
+      wl.remove();
     }
   }
 
@@ -324,10 +346,12 @@
   }
 
   function afterSubmit(reg) {
-    teamCount += 1;
+    var myNumber = teamCount + 1;          // this team's overall position
+    teamCount = myNumber;
     if (reg.team.jerseyColor) takenList.push(reg.team.jerseyColor);
     updateTrackerUI();
-    renderSuccess(reg);
+    applyOpenState();
+    renderSuccess(reg, myNumber);
     showStep(4);
   }
 
@@ -360,7 +384,7 @@
           jerseyInput.value = '';
           refreshRemote().then(function () { showStep(1); });
         } else if (/Registration full/i.test(m)) {
-          setStatus('Sorry — all 8 spots have just been taken.', 'error');
+          setStatus('Sorry — registration and the waitlist are both full now.', 'error');
           refreshRemote();
         } else if (/Registration closed/i.test(m)) {
           setStatus('Registration is currently closed.', 'error');
@@ -383,17 +407,21 @@
     }
   });
 
-  function renderSuccess(reg) {
+  function renderSuccess(reg, myNumber) {
     var panel = $('#success-panel');
-    var spotsLeft = Math.max(TOTAL_SPOTS - Math.min(teamCount, TOTAL_SPOTS), 0);
+    var isWaitlist = myNumber > TOTAL_SPOTS;
+    var wlPos = myNumber - TOTAL_SPOTS;
+    var heading = isWaitlist ? 'You\'re on the waitlist, ' + esc(reg.team.name) + '!' : 'You\'re in, ' + esc(reg.team.name) + '!';
+    var lead = isWaitlist
+      ? 'The 8 main spots were full, so you\'ve joined the <strong>waitlist at position ' + wlPos + ' of ' + WAITLIST_MAX + '</strong>. If a spot opens up we\'ll call <strong style="color:#0b1024">' + esc(reg.captainContact.name) + '</strong> at ' + esc(reg.captainContact.phone) + '.'
+      : 'Registration received. We\'ll contact <strong style="color:#0b1024">' + esc(reg.captainContact.name) + '</strong> at ' + esc(reg.captainContact.phone) + ' to confirm your spot.';
     panel.innerHTML =
       '<div class="reg-success">' +
       '<div class="tick"><svg class="ico"><use href="#i-check"/></svg></div>' +
-      '<h3>You\'re in, ' + esc(reg.team.name) + '!</h3>' +
-      '<p>Registration received. We\'ll contact <strong style="color:#0b1024">' + esc(reg.captainContact.name) + '</strong> at ' + esc(reg.captainContact.phone) + ' to confirm your spot.</p>' +
+      '<h3>' + heading + '</h3>' +
+      '<p>' + lead + '</p>' +
       '<p>Jersey color locked in: <span class="rid">' + esc(reg.team.jerseyColor) + '</span></p>' +
       '<p>Registration ID: <span class="rid">' + reg.id + '</span></p>' +
-      '<p>' + (spotsLeft > 0 ? spotsLeft + ' spot' + (spotsLeft === 1 ? '' : 's') + ' left.' : 'That may have been the last spot!') + '</p>' +
       '<button type="button" class="btn btn-line btn-sm" id="dl-json" style="margin-top:16px">Download entry (backup)</button>' +
       '</div>';
     var dl = $('#dl-json');

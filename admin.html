@@ -51,6 +51,7 @@
     .placement{display:inline-block;font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:999px;margin-left:10px;vertical-align:middle}
     .placement.champ{background:#f5c518;color:#3a2e00}
     .placement.run{background:#c7cde0;color:#1a2036}
+    .placement.wait{background:#ff2d78;color:#fff}
     .login{background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px;max-width:420px;box-shadow:0 8px 24px rgba(10,36,114,.08)}
     .login input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:1rem;font-family:inherit;margin-bottom:12px}
     .login .err{color:var(--red);font-weight:700;font-size:.9rem;min-height:1.2em;margin-top:8px}
@@ -238,13 +239,14 @@
     function render(){
       count.textContent = regs.length + (regs.length===1?' team':' teams');
       if(!regs.length){ list.innerHTML='<div class="empty">No registrations yet.</div>'; return; }
-      list.innerHTML = regs.map(r=>{
+      list.innerHTML = regs.map((r,idx)=>{
         const placement = results.champion===r.id?'<span class="placement champ">CHAMPION</span>':(results.runnerUp===r.id?'<span class="placement run">RUNNER-UP</span>':'');
+        const wl = idx>=8 ? '<span class="placement wait">WAITLIST</span>' : '';
         return `
         <div class="team">
           <div class="team-head">
             <div>
-              <div class="team-name">${esc(r.team && r.team.name)}${placement}</div>
+              <div class="team-name">${esc(r.team && r.team.name)}${placement}${wl}</div>
               ${r.team&&r.team.jerseyColor?`<div class="team-jersey"><span class="jersey-dot" style="background:${JCOL[r.team.jerseyColor]||'#ccc'}"></span>${esc(r.team.jerseyColor)} jersey</div>`:''}
               <div class="team-meta">${esc(r.id)} · ${new Date(r.submittedAt).toLocaleString()}</div>
             </div>
