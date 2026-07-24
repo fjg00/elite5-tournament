@@ -87,6 +87,8 @@
       if (panel) panel.remove();
     }
 
+    updateJerseyField(onWaitlist);
+
     // Waitlist notice above the form
     var wl = $('#waitlist-banner');
     if (onWaitlist && !blocked) {
@@ -134,6 +136,34 @@
   ];
   var picker = $('#color-picker');
   var jerseyInput = $('#jerseyColor');
+  var jerseyWaitlist = false; // set true when the 8 colors are gone (waitlist mode)
+
+  function updateJerseyField(onWaitlist) {
+    jerseyWaitlist = !!onWaitlist;
+    if (!picker) return;
+    var field = picker.parentElement;
+    var req = field.querySelector('label .req');
+    var hint = field.querySelector('.field-hint');
+    var note = field.querySelector('#jersey-wl-note');
+    if (onWaitlist) {
+      if (req) req.style.display = 'none';
+      if (hint) hint.style.display = 'none';
+      jerseyInput.value = '';
+      picker.classList.remove('invalid');
+      if (!note) {
+        note = document.createElement('p');
+        note.id = 'jersey-wl-note';
+        note.className = 'field-hint';
+        field.insertBefore(note, jerseyInput);
+      }
+      note.textContent = 'All colors are taken by the 8 main teams. Waitlist teams get a color assigned if a spot opens — just continue.';
+    } else {
+      if (req) req.style.display = '';
+      if (hint) hint.style.display = '';
+      if (note) note.remove();
+    }
+  }
+
   function buildColors() {
     if (!picker) return;
     picker.innerHTML = '';
@@ -286,7 +316,9 @@
     if (n === 1) {
       var ok = true;
       var tn = $('#teamName'); var tnBad = !tn.value.trim(); markInvalid(tn, tnBad); if (tnBad) ok = false;
-      if (!jerseyInput.value) { ok = false; if (picker) picker.classList.add('invalid'); } else if (picker) picker.classList.remove('invalid');
+      if (!jerseyWaitlist) {
+        if (!jerseyInput.value) { ok = false; if (picker) picker.classList.add('invalid'); } else if (picker) picker.classList.remove('invalid');
+      } else if (picker) { picker.classList.remove('invalid'); }
       if (!ok) setStatus(tnBad ? 'Enter your team name.' : 'Pick a jersey color.', 'error');
       return ok;
     }
@@ -420,7 +452,7 @@
       '<div class="tick"><svg class="ico"><use href="#i-check"/></svg></div>' +
       '<h3>' + heading + '</h3>' +
       '<p>' + lead + '</p>' +
-      '<p>Jersey color locked in: <span class="rid">' + esc(reg.team.jerseyColor) + '</span></p>' +
+      '<p>Jersey color: <span class="rid">' + (reg.team.jerseyColor ? esc(reg.team.jerseyColor) : 'assigned if you get a spot') + '</span></p>' +
       '<p>Registration ID: <span class="rid">' + reg.id + '</span></p>' +
       '<button type="button" class="btn btn-line btn-sm" id="dl-json" style="margin-top:16px">Download entry (backup)</button>' +
       '</div>';
