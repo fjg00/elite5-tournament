@@ -113,3 +113,7 @@ create policy "anon upload photos" on storage.objects
 drop policy if exists "admin read photos" on storage.objects;
 create policy "admin read photos" on storage.objects
   for select to authenticated using (bucket_id = 'player-photos');
+
+drop policy if exists "admin delete photos" on storage.objects;
+create policy "admin delete photos" on storage.objects
+  for delete to authenticated using (bucket_id = 'player-photos');
